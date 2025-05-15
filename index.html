@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retail Analytics Dashboard | Powered by R Shiny</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #18bc9c;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #7b8a8b;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            color: #34495e;
+            line-height: 1.6;
+        }
+        
+        .dashboard-header {
+            background-color: var(--primary);
+            color: white;
+            padding: 25px 0;
+            margin-bottom: 30px;
+            border-bottom: 4px solid var(--success);
+        }
+        
+        .business-context {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-left: 4px solid var(--secondary);
+        }
+        
+        .shiny-panel {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--secondary);
+        }
+        
+        .control-title {
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .plot-container {
+            position: relative;
+            margin: 20px 0;
+            background-color: white;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        
+        #scatterPlot {
+            width: 100%;
+            height: 400px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            position: relative;
+        }
+        
+        .data-point {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            transform: translate(-4px, -4px);
+            transition: all 0.3s ease;
+        }
+        
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        
+        .stats-table th {
+            background-color: var(--primary);
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .stats-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .stats-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .highlight {
+            background-color: rgba(24, 188, 156, 0.2) !important;
+            font-weight: bold;
+        }
+        
+        .positive {
+            color: #27ae60;
+            font-weight: 600;
+        }
+        
+        .negative {
+            color: var(--danger);
+            font-weight: 600;
+        }
+        
+        .neutral {
+            color: var(--warning);
+            font-weight: 600;
+        }
+        
+        .correlation-matrix {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+            margin: 20px 0;
+        }
+        
+        .correlation-cell {
+            padding: 10px;
+            text-align: center;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        
+        .btn-shiny {
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .btn-shiny:hover {
+            background-color: #2980b9;
+            transform: translateY(-1px);
+        }
+        
+        .legend {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 6px;
+            display: inline-block;
+        }
+        
+        .insight-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border-left: 3px solid var(--secondary);
+        }
+        
+        .insight-card h5 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+        
+        .insight-card p {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 5px;
+        }
+        
+        .impact-badge {
+            background-color: var(--success);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255,255,255,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--secondary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-chart-line"></i> Retail Sales Analytics Dashboard</h1>
+                    <p class="mb-0">Data-Driven Decision Making for Retail Management</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <span class="badge bg-success">R 4.2.1</span>
+                    <span class="badge bg-primary">Shiny 1.7.4</span>
+                    <span class="badge bg-secondary">Sample Data</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Business Context Section -->
+        <div class="business-context">
+            <h3><i class="fas fa-briefcase"></i> Business Context</h3>
+            <div class="row mt-3">
+                <div class="col-md-4">
+                    <div class="insight-card">
+                        <h5>Client Profile</h5>
+                        <p><strong>Industry:</strong> Retail & E-commerce</p>
+                        <p><strong>Size:</strong> 200+ stores nationwide</p>
+                        <p><strong>Challenge:</strong> Need to optimize inventory and marketing spend</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="insight-card">
+                        <h5>Business Needs</h5>
+                        <p>• Understand sales trends by category</p>
+                        <p>• Identify seasonal patterns</p>
+                        <p>• Detect underperforming products</p>
+                        <p>• Correlate sales with promotions</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="insight-card">
+                        <h5>Solution Benefits</h5>
+                        <p><span class="impact-badge">+15%</span> Inventory efficiency</p>
+                        <p><span class="impact-badge">+20%</span> Marketing ROI</p>
+                        <p><span class="impact-badge">-10%</span> Excess stock</p>
+                        <p><span class="impact-badge">+8%</span> Profit margins</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Control Panel -->
+            <div class="col-md-4">
+                <div class="shiny-panel">
+                    <div class="control-title"><i class="fas fa-sliders-h"></i> DATA CONTROLS</div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Date Range</label>
+                        <select class="form-select" id="dateRangeSelect">
+                            <option value="full">Full Period (2020-2023)</option>
+                            <option value="2020">2020</option>
+                            <option value="2021">2021</option>
+                            <option value="2022">2022</option>
+                            <option value="2023">2023</option>
+                            <option value="q4">Q4 Holiday Season</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Product Category Focus</label>
+                        <select class="form-select" id="categorySelect">
+                            <option value="all">All Categories</option>
+                            <option value="electronics">Electronics</option>
+                            <option value="clothing">Clothing & Apparel</option>
+                            <option value="home">Home & Kitchen</option>
+                            <option value="sports">Sports & Outdoors</option>
+                            <option value="beauty">Beauty & Personal Care</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Primary Analysis Metric</label>
+                        <select class="form-select" id="metricSelect">
+                            <option value="sales">Total Sales Revenue</option>
+                            <option value="units">Units Sold</option>
+                            <option value="profit">Gross Profit</option>
+                            <option value="margin">Profit Margin (%)</option>
+                            <option value="customers">Unique Customers</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn-shiny w-100" id="updateBtn">
+                        <i class="fas fa-sync-alt"></i> Update Dashboard
+                    </button>
+                </div>
+                
+                <div class="shiny-panel">
+                    <div class="control-title"><i class="fas fa-info-circle"></i> HOW TO USE</div>
+                    <div class="insight-card">
+                        <h5><i class="fas fa-chart-scatter"></i> Scatter Plot</h5>
+                        <p>Shows sales distribution over time. Each point represents a transaction.</p>
+                        <div class="legend">
+                            <div class="legend-item">
+                                <span class="legend-color" style="background-color: #3498db;"></span>
+                                <span>Selected Category</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background-color: #bdc3c7;"></span>
+                                <span>Other Categories</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background-color: #e74c3c;"></span>
+                                <span>Statistical Outliers</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Visualization Panel -->
+            <div class="col-md-8">
+                <div class="shiny-panel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="control-title"><i class="fas fa-chart-scatter"></i> SALES DISTRIBUTION ANALYSIS</div>
+                        <div>
+                            <span class="badge bg-primary me-2">ggplot2</span>
+                            <span class="badge bg-success">plotly</span>
+                        </div>
+                    </div>
+                    
+                    <div class="plot-container">
+                        <div class="loading-overlay" id="plotLoading">
+                            <div class="spinner"></div>
+                        </div>
+                        <div id="scatterPlot">
+                            <!-- Data points will be generated by JavaScript -->
+                        </div>
+                        <div class="text-center mt-2">
+                            <small class="text-muted">Each point represents a sales transaction. Size indicates order value.</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="shiny-panel">
+                            <div class="control-title"><i class="fas fa-calculator"></i> STATISTICAL INSIGHTS</div>
+                            <table class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th>Metric</th>
+                                        <th>Value</th>
+                                        <th>Trend</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="statsTable">
+                                    <tr>
+                                        <td>Mean Sales</td>
+                                        <td>$12,456</td>
+                                        <td class="positive">+12.4%</td>
+                                    </tr>
+                                    <tr class="highlight">
+                                        <td>Selected Category</td>
+                                        <td>$14,872</td>
+                                        <td class="positive">+19.4%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Standard Deviation</td>
+                                        <td>$3,245</td>
+                                        <td class="neutral">±2.1%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Correlation (Time)</td>
+                                        <td>0.78</td>
+                                        <td class="positive">Strong</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Skewness</td>
+                                        <td>1.24</td>
+                                        <td class="negative">Right-tailed</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="insight-card mt-2">
+                                <h5><i class="fas fa-lightbulb"></i> Key Insight</h5>
+                                <p>Electronics show <strong>19.4% higher</strong> sales than average, with strong correlation to holiday periods.</p>
+                                <p class="text-success"><strong>Recommendation:</strong> Increase inventory before Q4 holidays.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="shiny-panel">
+                            <div class="control-title"><i class="fas fa-project-diagram"></i> METRIC CORRELATIONS</div>
+                            <div class="correlation-matrix" id="correlationMatrix">
+                                <!-- Filled by JavaScript -->
+                            </div>
+                            <div class="insight-card mt-2">
+                                <h5><i class="fas fa-lightbulb"></i> Key Insight</h5>
+                                <p><strong>Sales</strong> and <strong>Customers</strong> show high correlation (0.82).</p>
+                                <p class="text-success"><strong>Recommendation:</strong> Focus on customer acquisition to drive revenue.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script>
+        // Current state of the dashboard
+        const dashboardState = {
+            selectedCategory: 'all',
+            currentMetric: 'sales',
+            dateRange: 'full'
+        };
+
+        // Generate scatter plot data points
+        function generateScatterPlot() {
+            const plot = document.getElementById('scatterPlot');
+            plot.innerHTML = '';
+            
+            const width = plot.offsetWidth;
+            const height = plot.offsetHeight;
+            const pointCount = 200;
+            const selectedCategory = dashboardState.selectedCategory;
+            
+            // Generate trend line data
+            const trendLine = [];
+            for (let x = 0; x <= width; x += width/20) {
+                const noise = (Math.random() - 0.5) * height/8;
+                const y = height - (x/width * height * 0.7 + height * 0.1 + noise);
+                trendLine.push({x, y});
+            }
+            
+            // Draw trend line
+            const trendLineEl = document.createElement('div');
+            trendLineEl.style.position = 'absolute';
+            trendLineEl.style.top = '0';
+            trendLineEl.style.left = '0';
+            trendLineEl.style.width = '100%';
+            trendLineEl.style.height = '100%';
+            
+            let path = `<svg width="${width}" height="${height}" style="position:absolute;top:0;left:0;">`;
+            path += `<path d="M ${trendLine[0].x} ${trendLine[0].y}`;
+            for (let i = 1; i < trendLine.length; i++) {
+                path += ` L ${trendLine[i].x} ${trendLine[i].y}`;
+            }
+            path += `" stroke="#3498db" stroke-width="2" fill="none" stroke-dasharray="5,3" />`;
+            path += `</svg>`;
+            
+            trendLineEl.innerHTML = path;
+            plot.appendChild(trendLineEl);
+            
+            // Generate random data points
+            for (let i = 0; i < pointCount; i++) {
+                const point = document.createElement('div');
+                point.className = 'data-point';
+                
+                // Position with some clustering around the trend
+                const x = Math.random() * width;
+                const yOffset = (Math.random() - 0.5) * height * 0.4;
+                const trendY = height - (x/width * height * 0.7 + height * 0.1);
+                const y = trendY + yOffset;
+                
+                point.style.left = `${x}px`;
+                point.style.top = `${y}px`;
+                
+                // Determine if this point belongs to selected category
+                const isSelected = selectedCategory !== 'all' && Math.random() > 0.7;
+                const isOutlier = Math.random() > 0.95;
+                
+                if (isSelected) {
+                    point.style.backgroundColor = '#3498db';
+                    point.style.width = '10px';
+                    point.style.height = '10px';
+                } else if (isOutlier) {
+                    point.style.backgroundColor = '#e74c3c';
+                    point.style.width = '12px';
+                    point.style.height = '12px';
+                } else {
+                    point.style.backgroundColor = '#bdc3c7';
+                    
+                    // Fade points outside selected range
+                    if (selectedCategory !== 'all') {
+                        point.style.opacity = '0.3';
+                    }
+                }
+                
+                plot.appendChild(point);
+            }
+        }
+        
+        // Generate correlation matrix
+        function generateCorrelationMatrix() {
+            const matrix = document.getElementById('correlationMatrix');
+            matrix.innerHTML = '';
+            
+            const metrics = ['Sales', 'Units', 'Profit', 'Margin', 'Customers'];
+            
+            // Header row
+            const header = document.createElement('div');
+            header.className = 'correlation-cell';
+            header.style.backgroundColor = '#2c3e50';
+            header.style.color = 'white';
+            matrix.appendChild(header);
+            
+            for (const metric of metrics) {
+                const headerCell = document.createElement('div');
+                headerCell.className = 'correlation-cell';
+                headerCell.style.backgroundColor = '#2c3e50';
+                headerCell.style.color = 'white';
+                headerCell.textContent = metric;
+                matrix.appendChild(headerCell);
+            }
+            
+            // Data rows
+            for (const rowMetric of metrics) {
+                // Row header
+                const rowHeader = document.createElement('div');
+                rowHeader.className = 'correlation-cell';
+                rowHeader.style.backgroundColor = '#2c3e50';
+                rowHeader.style.color = 'white';
+                rowHeader.textContent = rowMetric;
+                matrix.appendChild(rowHeader);
+                
+                // Data cells
+                for (const colMetric of metrics) {
+                    const cell = document.createElement('div');
+                    cell.className = 'correlation-cell';
+                    
+                    if (rowMetric === colMetric) {
+                        cell.textContent = '1.00';
+                        cell.style.backgroundColor = '#ecf0f1';
+                    } else {
+                        // Generate random correlation between -1 and 1
+                        let correlation = (Math.random() * 2 - 1).toFixed(2);
+                        
+                        // Make some correlations stronger based on metric pairs
+                        if ((rowMetric === 'Sales' && colMetric === 'Profit') || 
+                            (rowMetric === 'Profit' && colMetric === 'Sales')) {
+                            correlation = (0.7 + Math.random() * 0.25).toFixed(2);
+                        }
+                        
+                        if ((rowMetric === 'Units' && colMetric === 'Customers') || 
+                            (rowMetric === 'Customers' && colMetric === 'Units')) {
+                            correlation = (0.6 + Math.random() * 0.3).toFixed(2);
+                        }
+                        
+                        cell.textContent = correlation;
+                        
+                        // Color based on correlation strength
+                        const corrValue = parseFloat(correlation);
+                        if (corrValue > 0.5) {
+                            const intensity = Math.floor(200 * (1 - corrValue));
+                            cell.style.backgroundColor = `rgb(${intensity}, 230, ${intensity})`;
+                            cell.style.color = '#27ae60';
+                        } else if (corrValue < -0.5) {
+                            const intensity = Math.floor(200 * (1 - Math.abs(corrValue)));
+                            cell.style.backgroundColor = `rgb(230, ${intensity}, ${intensity})`;
+                            cell.style.color = '#e74c3c';
+                        } else {
+                            const intensity = Math.floor(200 * (1 - Math.abs(corrValue)));
+                            cell.style.backgroundColor = `rgb(240, ${intensity + 100}, ${intensity})`;
+                            cell.style.color = '#f39c12';
+                        }
+                    }
+                    
+                    matrix.appendChild(cell);
+                }
+            }
+        }
+        
+        // Update stats table based on current state
+        function updateStatsTable() {
+            const selectedCategory = dashboardState.selectedCategory;
+            const rows = document.querySelectorAll('#statsTable tr');
+            
+            // Mean Sales
+            const baseMean = 8000 + Math.random() * 8000;
+            rows[0].children[1].textContent = `$${Math.round(baseMean).toLocaleString()}`;
+            
+            // Selected Category Mean
+            const selectedMean = selectedCategory === 'all' 
+                ? baseMean * (1 + Math.random() * 0.2)
+                : baseMean * (1.1 + Math.random() * 0.3);
+            rows[1].children[1].textContent = `$${Math.round(selectedMean).toLocaleString()}`;
+            
+            // Standard Deviation
+            const stdDev = 2000 + Math.random() * 1000;
+            rows[2].children[1].textContent = `$${Math.round(stdDev).toLocaleString()}`;
+            
+            // Correlation (Time)
+            const correlation = (0.5 + Math.random() * 0.5).toFixed(2);
+            rows[3].children[1].textContent = correlation;
+            
+            // Skewness (changes based on category selection)
+            const skewness = selectedCategory === 'electronics' ? '1.45' :
+                           selectedCategory === 'clothing' ? '0.85' : '1.24';
+            rows[4].children[1].textContent = skewness;
+            
+            // Update change indicators
+            const changes = [
+                Math.random() * 0.2, 
+                selectedCategory === 'all' ? Math.random() * 0.15 : Math.random() * 0.25,
+                Math.random() - 0.5, 
+                (Math.random() - 0.7) * 0.5,
+                selectedCategory === 'electronics' ? 0.15 : -0.05
+            ];
+            
+            rows.forEach((row, index) => {
+                if (index < changes.length) {
+                    const change = changes[index];
+                    const changeCell = row.children[2];
+                    
+                    if (change > 0.1) {
+                        changeCell.textContent = `+${(change * 100).toFixed(1)}%`;
+                        changeCell.className = 'positive';
+                    } else if (change < -0.1) {
+                        changeCell.textContent = `${(change * 100).toFixed(1)}%`;
+                        changeCell.className = 'negative';
+                    } else {
+                        changeCell.textContent = `±${(Math.abs(change) * 100).toFixed(1)}%`;
+                        changeCell.className = 'neutral';
+                    }
+                }
+            });
+        }
+        
+        // Highlight selected category in stats table
+        function highlightSelectedCategory() {
+            const selectedCategory = dashboardState.selectedCategory;
+            const rows = document.querySelectorAll('#statsTable tr');
+            
+            rows.forEach(row => {
+                row.classList.remove('highlight');
+                
+                if (selectedCategory !== 'all' && 
+                    row.cells[0].textContent.includes('Selected Category')) {
+                    row.classList.add('highlight');
+                }
+            });
+        }
+        
+        function showLoading() {
+            document.getElementById('plotLoading').style.display = 'flex';
+        }
+        
+        function hideLoading() {
+            document.getElementById('plotLoading').style.display = 'none';
+        }
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            generateScatterPlot();
+            generateCorrelationMatrix();
+            updateStatsTable();
+            
+            // Update button functionality
+            document.getElementById('updateBtn').addEventListener('click', function() {
+                // Update dashboard state
+                dashboardState.selectedCategory = document.getElementById('categorySelect').value;
+                dashboardState.currentMetric = document.getElementById('metricSelect').value;
+                dashboardState.dateRange = document.getElementById('dateRangeSelect').value;
+                
+                showLoading();
+                
+                // Simulate loading delay
+                setTimeout(() => {
+                    generateScatterPlot();
+                    generateCorrelationMatrix();
+                    updateStatsTable();
+                    highlightSelectedCategory();
+                    hideLoading();
+                    
+                    // Show updated status
+                    this.innerHTML = '<i class="fas fa-check"></i> Dashboard Updated!';
+                    setTimeout(() => {
+                        this.innerHTML = '<i class="fas fa-sync-alt"></i> Update Dashboard';
+                    }, 1500);
+                }, 800);
+            });
+            
+            // Category select change
+            document.getElementById('categorySelect').addEventListener('change', function() {
+                dashboardState.selectedCategory = this.value;
+                highlightSelectedCategory();
+            });
+            
+            // Metric select change
+            document.getElementById('metricSelect').addEventListener('change', function() {
+                dashboardState.currentMetric = this.value;
+            });
+            
+            // Date range change
+            document.getElementById('dateRangeSelect').addEventListener('change', function() {
+                dashboardState.dateRange = this.value;
+            });
+        });
+    </script>
+</body>
+</html>
